@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @unique @default(cuid())
+  name        String
+  email       String?      @unique
+  password    String?
+  comments    Comment[]
+  posts       Post[]
+  profileInfo ProfileInfo?
+  userGroups  UserGroup[]
+
+  @@map("users")
+}
+
+model Post {
+  id       String    @id @unique @default(cuid())
+  title    String
+  content  String
+  authorId String?
+  comments Comment[]
+  author   User?     @relation(fields: [authorId], references: [id])
+
+  @@map("posts")
+}
+
+model Comment {
+  id       String  @id @unique @default(cuid())
+  text     String
+  authorId String?
+  postId   String?
+  author   User?   @relation(fields: [authorId], references: [id])
+  post     Post?   @relation(fields: [postId], references: [id])
+
+  @@map("comments")
+}
+
+model ProfileInfo {
+  id       String @id @unique @default(cuid())
+  metaData Json?
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@map("profile_infos")
+}
+
+model Group {
+  id         String      @id @unique @default(cuid())
+  name       String
+  userGroups UserGroup[]
+
+  @@map("groups")
+}
+
+model UserGroup {
+  id      String @id @unique @default(cuid())
+  userId  String
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, groupId])
+  @@map("users_groups")
+}
