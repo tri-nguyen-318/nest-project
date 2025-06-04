@@ -13,3 +13,22 @@ services:
       - 8000:5432
     volumes:
       - ./sql:/docker-entrypoint-initdb.d
+
+  # Docker to run the NestJS application
+  nestjs:
+    container_name: nest-project-nestjs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 3002:3000
+    depends_on:
+      - database
+    environment:
+      DATABASE_HOST: database # The host of the PostgreSQL database (the service name)
+      DATABASE_PORT: 5432 # The port of the PostgreSQL database
+      DATABASE_USER: username # The PostgreSQL user
+      DATABASE_PASSWORD: password # The PostgreSQL password
+      DATABASE_NAME: nestdb # The PostgreSQL database name
+    command: npm run start:dev # Command to run the NestJS application in development mode

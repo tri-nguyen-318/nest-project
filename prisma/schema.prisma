@@ -11,8 +11,8 @@ datasource db {
 model User {
   id          String       @id @unique @default(cuid())
   name        String
-  email       String?      @unique
-  password    String?
+  email       String       @unique
+  password    String
   comments    Comment[]
   posts       Post[]
   profileInfo ProfileInfo?
