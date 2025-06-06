@@ -6,6 +6,11 @@ import { AuthJwtPayload } from '../types/auth.jwtPayload';
 import { AuthService } from '../auth.service';
 import refreshConfig from '../config/refresh.config';
 
+type BodyRefresh = {
+  body: {
+    refresh: string;
+  };
+};
 @Injectable()
 export class RefreshStrategy extends PassportStrategy(Strategy, 'refresh-jwt') {
   constructor(
@@ -21,10 +26,11 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'refresh-jwt') {
     });
   }
 
-  validate(req: Request, payload: AuthJwtPayload) {
+  validate(req: Request & BodyRefresh, payload: AuthJwtPayload) {
     const userId = payload.sub;
-    console.log('🚀 ~ RefreshStrategy ~ validate ~ userId:', userId);
 
-    return this.authService.validateRefreshToken(userId);
+    const refreshToken: string = req.body.refresh;
+
+    return this.authService.validateRefreshToken(userId, refreshToken);
   }
 }

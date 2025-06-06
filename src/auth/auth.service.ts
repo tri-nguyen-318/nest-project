@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
-import { verify } from 'argon2';
+import { hash, verify } from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { AuthJwtPayload } from './types/auth.jwtPayload';
 import { IUser } from 'src/user/types';
@@ -43,6 +43,10 @@ export class AuthService {
 
   async login(userId: string, name: string) {
     const { accessToken, refreshToken } = await this.generateTokens(userId);
+
+    const hashedRT = await hash(refreshToken);
+
+    await this.userService.updateHashRefreshToken(userId, hashedRT);
 
     return {
       id: userId,
@@ -82,10 +86,19 @@ export class AuthService {
     return currentUser;
   }
 
-  async validateRefreshToken(userId: string) {
+  async validateRefreshToken(userId: string, refreshToken: string) {
     const user = await this.userService.findOne(userId);
 
     if (!user) throw new UnauthorizedException('User not found');
+
+    const refreshTokenMatched = await verify(
+      user.hashedRefreshToken as string,
+      refreshToken,
+    );
+
+    if (!refreshTokenMatched) {
+      throw new UnauthorizedException('Invalid Refresh Token!');
+    }
 
     const currentUser: IUser = {
       id: user.id,
@@ -105,5 +118,19 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  async validateGoogleUser(googleUser: CreateUserDto) {
+    const user = await this.userService.findByEmail(googleUser.email);
+
+    if (user) {
+      return user;
+    }
+
+    return await this.userService.create(googleUser);
+  }
+
+  async signOut(userId: string) {
+    return await this.userService.updateHashRefreshToken(userId, null);
   }
 }
