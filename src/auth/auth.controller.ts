@@ -10,11 +10,13 @@ import {
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
-import { IUser } from 'src/user/types';
 import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
 import { Response } from 'express';
 import { Public } from './decorators/public.decorator';
+import { Roles } from './decorators/role.decorator';
+import { User } from 'generated/prisma';
+import { AuthenticatedRequest } from './types/auth.jwtPayload';
 
 @Controller('auth')
 export class AuthController {
@@ -29,28 +31,36 @@ export class AuthController {
   @Public()
   @UseGuards(LocalAuthGuard)
   @Post('signin')
-  login(@Request() req: { user: IUser }) {
-    return this.authService.login(req.user.id, req.user.name);
+  login(@Request() req: AuthenticatedRequest) {
+    const user: User = req.user;
+
+    return this.authService.login(user.id, user.name, user.role);
   }
 
   @Post('signout')
-  signout(@Request() req: { user: IUser }) {
-    return this.authService.signOut(req.user.id);
+  signout(@Request() req: AuthenticatedRequest) {
+    const user: User = req.user;
+
+    return this.authService.signOut(user.id);
   }
 
+  @Roles('ADMIN', 'EDITOR')
   @Get('protected')
-  getAll(@Request() req: { user: IUser }) {
-    console.log('🚀 ~ AuthController ~ getAll ~ user:', req.user);
+  getAll(@Request() req: AuthenticatedRequest) {
+    const user: User = req.user;
+
     return {
-      message: `Now you can see this protected route, this is your user id: ${req.user.id}`,
+      message: `Now you can see this protected route, this is your user id: ${user.id}`,
     };
   }
 
   @Public()
   @UseGuards(RefreshAuthGuard)
   @Post('refresh')
-  refreshToken(@Request() req: { user: IUser }) {
-    return this.authService.refreshToken(req.user.id, req.user.name);
+  refreshToken(@Request() req: AuthenticatedRequest) {
+    const user: User = req.user;
+
+    return this.authService.refreshToken(user.id, user.name);
   }
 
   @Public()
@@ -63,15 +73,19 @@ export class AuthController {
   @Get('google/callback')
   async googleAuthCallback(
     @Request()
-    req: {
-      user: IUser;
-    },
+    req: AuthenticatedRequest,
     @Res() res: Response,
   ) {
-    const response = await this.authService.login(req.user.id, req.user.name);
+    const user: User = req.user;
+
+    const response = await this.authService.login(
+      user.id,
+      user.name,
+      user.role,
+    );
 
     res.redirect(
-      `${process.env.FRONTEND_URL}/api/auth/google/callback?accessToken=${response.accessToken}&refreshToken=${response.refreshToken}&userId=${response.id}&name=${response.name}`,
+      `${process.env.FRONTEND_URL}/api/auth/google/callback?accessToken=${response.accessToken}&refreshToken=${response.refreshToken}&userId=${response.id}&name=${response.name}&role=${response.role}`,
     );
   }
 }

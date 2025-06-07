@@ -9,9 +9,9 @@ import { UserService } from 'src/user/user.service';
 import { hash, verify } from 'argon2';
 import { JwtService } from '@nestjs/jwt';
 import { AuthJwtPayload } from './types/auth.jwtPayload';
-import { IUser } from 'src/user/types';
 import refreshConfig from './config/refresh.config';
 import { ConfigType } from '@nestjs/config';
+import { Role, User } from 'generated/prisma';
 
 @Injectable()
 export class AuthService {
@@ -38,10 +38,10 @@ export class AuthService {
     if (!isPasswordMatched)
       throw new UnauthorizedException('Invalid Credentials');
 
-    return { id: user.id, name: user.name };
+    return { id: user.id, name: user.name, role: user.role };
   }
 
-  async login(userId: string, name: string) {
+  async login(userId: string, name: string, role: Role) {
     const { accessToken, refreshToken } = await this.generateTokens(userId);
 
     const hashedRT = await hash(refreshToken);
@@ -51,6 +51,7 @@ export class AuthService {
     return {
       id: userId,
       name,
+      role,
       accessToken,
       refreshToken,
     };
@@ -77,10 +78,11 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('User not found');
 
-    const currentUser: IUser = {
+    const currentUser = {
       id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
     };
 
     return currentUser;
@@ -100,7 +102,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid Refresh Token!');
     }
 
-    const currentUser: IUser = {
+    const currentUser: Partial<User> = {
       id: user.id,
       name: user.name,
       email: user.email,
